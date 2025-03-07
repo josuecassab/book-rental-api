@@ -111,5 +111,5 @@ func main() {
 	r.POST("/books", createBook)
 	r.PUT("/checkout/", checkoutBook)
 	r.PUT("/return/", returnBook)
-	r.Run("localhost:8080")
+	r.Run()
 }
