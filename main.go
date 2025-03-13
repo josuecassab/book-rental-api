@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,11 +31,28 @@ func getBooks(c *gin.Context) {
 
 func createBook(c *gin.Context) {
 
-	var newBook book
+	var newBook map[string]interface{}
+	byte_body, _ := io.ReadAll(c.Request.Body)
 
-	c.BindJSON(&newBook)
+	err := json.Unmarshal(byte_body, &newBook)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Could not decode body"})
+		return
+	}
+	fmt.Println(string(byte_body))
+	// c.BindJSON(&newBook)
+	fmt.Println(newBook)
 
-	books = append(books, newBook)
+	quantityInt, _ := strconv.Atoi(newBook["quantity"].(string))
+	newBookStruct := book{
+		Id:       fmt.Sprintf("%d", len(books)+1),
+		Title:    newBook["title"].(string),
+		Genre:    newBook["genre"].(string),
+		Author:   newBook["author"].(string),
+		Quantity: quantityInt,
+	}
+
+	books = append(books, newBookStruct)
 	c.IndentedJSON(http.StatusCreated, newBook)
 }
 
@@ -104,8 +124,17 @@ func returnBook(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, book)
 }
 
+func renderHTML(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title": "welcome to book library",
+		"books": books})
+}
+
 func main() {
 	r := gin.Default()
+
+	r.LoadHTMLGlob("templates/*")
+	r.GET("/", renderHTML)
 	r.GET("/books", getBooks)
 	r.GET("/books/:id", getBookById)
 	r.POST("/books", createBook)
